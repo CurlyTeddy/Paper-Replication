@@ -15,10 +15,10 @@ class MultiheadAttention(nn.Module):
 
         # parameters from multiple heads are stacked as [W_1, ..., W_h]
         # W_n is of size (embedding_dim, embedding_dim // head)
-        self.W_Q = nn.Parameter(torch.empty(size=(1, embedding_dim, embedding_dim)))
-        self.W_K = nn.Parameter(torch.empty(size=(1, k_dim, embedding_dim)))
-        self.W_V = nn.Parameter(torch.empty(size=(1, v_dim, embedding_dim)))
-        self.W_O = nn.Parameter(torch.empty((1, embedding_dim, embedding_dim)))
+        self.W_Q = nn.Parameter(torch.empty(size=(embedding_dim, embedding_dim)))
+        self.W_K = nn.Parameter(torch.empty(size=(k_dim, embedding_dim)))
+        self.W_V = nn.Parameter(torch.empty(size=(v_dim, embedding_dim)))
+        self.W_O = nn.Parameter(torch.empty((embedding_dim, embedding_dim)))
         nn.init.xavier_uniform_(self.W_Q)
         nn.init.xavier_uniform_(self.W_K)
         nn.init.xavier_uniform_(self.W_V)
@@ -33,16 +33,16 @@ class MultiheadAttention(nn.Module):
         # the key_padding_mask is used to mask out the paddings in sequences
         # it should have shape (N, S) where N is the size of batches and S is the max sequence length
         # attn_mask is for the masked multi-head attention in the decoder, masking out the leftward relationship of tokens
-        _, target_length, embedding_dim = query.shape
+        batch, target_length, embedding_dim = query.shape
         source_length = key.shape[1]
 
         if value.shape[1] != source_length:
             raise ValueError("key and value must have the same length")
     
         d_k = embedding_dim // self.num_heads
-        Q = (query @ self.W_Q).view(size=(1, target_length, self.num_heads, d_k)).transpose(1, 2)
-        K = (key @ self.W_K).view(size=(1, source_length, self.num_heads, d_k)).transpose(1, 2)
-        V = (value @ self.W_V).view(size=(1, source_length, self.num_heads, d_k)).transpose(1, 2)
+        Q = (query @ self.W_Q).view(size=(batch, target_length, self.num_heads, d_k)).transpose(1, 2)
+        K = (key @ self.W_K).view(size=(batch, source_length, self.num_heads, d_k)).transpose(1, 2)
+        V = (value @ self.W_V).view(size=(batch, source_length, self.num_heads, d_k)).transpose(1, 2)
 
         score = Q @ K.transpose(-1, -2) / math.sqrt(d_k)
 

@@ -35,6 +35,10 @@ class MultiheadAttention(nn.Module):
         # attn_mask is for the masked multi-head attention in the decoder, masking out the leftward relationship of tokens
         _, target_length, embedding_dim = query.shape
         source_length = key.shape[1]
+
+        if value.shape[1] != source_length:
+            raise ValueError("key and value must have the same length")
+    
         d_k = embedding_dim // self.num_heads
         Q = (query @ self.W_Q).view(size=(1, target_length, self.num_heads, d_k)).transpose(1, 2)
         K = (key @ self.W_K).view(size=(1, source_length, self.num_heads, d_k)).transpose(1, 2)
@@ -50,6 +54,6 @@ class MultiheadAttention(nn.Module):
         if attn_mask is not None:
             score.masked_fill_(attn_mask == 1, float("-inf"))
 
-        attention = torch.softmax(score, dim=-1) @ V
+        weights = torch.softmax(score, dim=-1)
         
-        return torch.cat(attention.unbind(dim=1), dim=-1) @ self.W_O
+        return torch.cat((weights @ V).unbind(dim=1), dim=-1) @ self.W_O, weights

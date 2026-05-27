@@ -12,6 +12,9 @@ class MultiheadAttention(nn.Module):
             raise ValueError("Embedding dimension is not divisible to number of heads")
         
         self.num_heads = num_heads
+
+        # parameters from multiple heads are stacked as [W_1, ..., W_h]
+        # W_n is of size (embedding_dim, embedding_dim // head)
         self.W_Q = nn.Parameter(torch.empty(size=(1, embedding_dim, embedding_dim)))
         self.W_K = nn.Parameter(torch.empty(size=(1, k_dim, embedding_dim)))
         self.W_V = nn.Parameter(torch.empty(size=(1, v_dim, embedding_dim)))
@@ -21,9 +24,10 @@ class MultiheadAttention(nn.Module):
         nn.init.xavier_uniform_(self.W_V)
         nn.init.xavier_uniform_(self.W_O)
     
-    def forward(self, query: torch.Tensor,
-                key: torch.Tensor,
-                value: torch.Tensor,
+    def forward(self,
+                query: torch.Tensor,   # (batch, target_length, embedding_dim)
+                key: torch.Tensor,     # (batch, source_length, k_dim)
+                value: torch.Tensor,   # (batch, source_length, v_dim)
                 key_padding_mask: Optional[torch.Tensor] = None,
                 attn_mask: Optional[torch.Tensor] = None):
         # the key_padding_mask is used to mask out the paddings in sequences

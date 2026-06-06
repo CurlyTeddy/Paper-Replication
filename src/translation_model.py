@@ -148,15 +148,15 @@ def main():
     vocab_size = tokenizer.vocab_size + 1
     hparams = {
         "token_max_length": 512,
-        "batch_size": 64,
+        "batch_size": 128,
         "test_ratio": 0.1,
-        "d_model": 512,
+        "d_model": 256,
         "warmup_steps": 400,
         "label_smoothing": 0.1,
         "beta1": 0.9,
         "beta2":0.98,
         "epsilon": 1e-9,
-        "epoch": 5,
+        "epoch": 3,
         "beam_width": 4
     }
 
@@ -244,9 +244,6 @@ def main():
                 writer.add_scalar("train/loss", loss.item(), e * len(train_loader) + i)
                 print(f"Loss {loss.item():>7f}, [{i + 1}/{len(train_loader)}]")
 
-            print(f"allocated memory: {torch.cuda.memory_allocated()}")
-            print(f"reserved memory: {torch.cuda.memory_reserved()}")
-
             model.eval()
             with torch.inference_mode():
                 for i, batch in enumerate(test_loader):
@@ -291,8 +288,6 @@ def main():
         writer.add_hparams(hparams, {"bleu_score": bleu_score.compute()})
     except Exception as e:
         print("Training failed, cleaning logs...")
-        print(f"allocated memory: {torch.cuda.memory_allocated()}")
-        print(f"reserved memory: {torch.cuda.memory_reserved()}")
 
         if os.path.exists(log_dir):
             shutil.rmtree(log_dir)

@@ -275,9 +275,6 @@ def main():
         torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH)
 
         bleu_score = BLEUScore(n_gram=4).to(device)
-        
-        model = LanguageModel(vocab_size=vocab_size).to(device)
-        model.load_state_dict(torch.load("models/base_model.pth", weights_only=True))
         model.eval()
         with torch.inference_mode():
             for i, batch in enumerate(test_loader):

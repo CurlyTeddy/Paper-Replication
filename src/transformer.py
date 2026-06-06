@@ -81,7 +81,7 @@ class EncoderLayer(nn.Module):
         self.norm_1 = nn.LayerNorm(embedding_dim)
         self.ff = FeedForwardLayer(embedding_dim, feedforward_dim)
         self.norm_2 = nn.LayerNorm(embedding_dim)
-        self.dropout = nn.Dropout(dropout, inplace=True)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, source: torch.Tensor, key_padding_mask: Optional[torch.Tensor]=None, attn_mask: Optional[torch.Tensor]=None):
         # encoder sometimes uses attn_mask to block token-to-token attention
@@ -112,7 +112,7 @@ class DecoderLayer(nn.Module):
         self.norm_2 = nn.LayerNorm(embedding_dim)
         self.ff = FeedForwardLayer(embedding_dim, feedforward_dim)
         self.norm_3 = nn.LayerNorm(embedding_dim)
-        self.dropout = nn.Dropout(dropout, inplace=True)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self,
                 target: torch.Tensor,

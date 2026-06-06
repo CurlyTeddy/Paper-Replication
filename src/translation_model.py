@@ -27,7 +27,7 @@ class LanguageModel(nn.Module):
                  dropout: float=0.1):
         super().__init__()
         self.embedding_matrix = nn.Embedding(vocab_size, embedding_dim)
-        self.register_buffer("positional_encoding", torch.linspace(0, max_sequence_length - 1, max_sequence_length).unsqueeze(dim=1) / torch.pow(1e4, torch.linspace(0, embedding_dim - 1, embedding_dim) // 2 / embedding_dim))
+        self.register_buffer("positional_encoding", torch.linspace(0, max_sequence_length - 1, max_sequence_length).unsqueeze(dim=1) / torch.pow(1e4, torch.linspace(0, embedding_dim - 1, embedding_dim) // 2 * 2 / embedding_dim))
         torch.sin(self.positional_encoding[:, ::2], out=self.positional_encoding[:, ::2]) # pyright: ignore[reportIndexIssue]
         torch.cos(self.positional_encoding[:, 1::2], out=self.positional_encoding[:, 1::2]) # pyright: ignore[reportIndexIssue]
         self.transformer = Transformer(embedding_dim, num_heads, encoder_num_layers, decoder_num_layers, feedforward_dim, dropout)

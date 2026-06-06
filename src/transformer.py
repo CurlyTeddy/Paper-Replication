@@ -1,6 +1,7 @@
 from typing import Optional
 from torch import nn
 
+import copy
 import math
 import torch
 
@@ -93,7 +94,7 @@ class EncoderLayer(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, encoder_layer: EncoderLayer, num_layers: int=6):
         super().__init__()
-        self.layers = nn.ModuleList([encoder_layer for _ in range(num_layers)])
+        self.layers = nn.ModuleList([copy.deepcopy(encoder_layer) for _ in range(num_layers)])
     
     def forward(self, source: torch.Tensor, key_padding_mask: Optional[torch.Tensor]=None, attn_mask: Optional[torch.Tensor]=None):
         for layer in self.layers:
@@ -135,7 +136,7 @@ class DecoderLayer(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, decoder_layer: DecoderLayer, num_layers: int=6):
         super().__init__()
-        self.layers = nn.ModuleList([decoder_layer for _ in range(num_layers)])
+        self.layers = nn.ModuleList([copy.deepcopy(decoder_layer) for _ in range(num_layers)])
     
     def forward(self,
                 target: torch.Tensor,

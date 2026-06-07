@@ -283,7 +283,6 @@ def main():
     model.eval()
     with torch.inference_mode():
         for i, batch in enumerate(test_loader):
-            print()
             move_dict_to_device(batch, device)
             key_padding_mask = batch["attention_mask"] == 0
             predict_tokens = model.generate(batch["input_ids"], special_token_ids, source_key_padding_mask=key_padding_mask, memory_key_padding_mask=key_padding_mask)

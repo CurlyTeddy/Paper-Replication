@@ -92,7 +92,7 @@ class EncoderLayer(nn.Module):
     
 
 class Encoder(nn.Module):
-    def __init__(self, encoder_layer: EncoderLayer, num_layers: int=6):
+    def __init__(self, encoder_layer: nn.Module, num_layers: int=6):
         super().__init__()
         self.layers = nn.ModuleList([copy.deepcopy(encoder_layer) for _ in range(num_layers)])
     

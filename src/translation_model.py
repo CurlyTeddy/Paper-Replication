@@ -148,15 +148,16 @@ def main():
     vocab_size = tokenizer.vocab_size + 1
     hparams = {
         "token_max_length": 512,
-        "batch_size": 128,
+        "batch_size": 64,
         "test_ratio": 0.1,
-        "d_model": 256,
+        "d_model": 512,
+        "num_layers": 1,
         "warmup_steps": 400,
         "label_smoothing": 0.1,
         "beta1": 0.9,
         "beta2":0.98,
         "epsilon": 1e-9,
-        "epoch": 3,
+        "epoch": 10,
         "beam_width": 4
     }
 
@@ -191,7 +192,7 @@ def main():
                             collate_fn=DataCollatorForSeq2Seq(tokenizer, padding="longest", max_length=hparams["token_max_length"], label_pad_token_id=LABEL_PAD_ID))
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = LanguageModel(vocab_size, hparams["d_model"], encoder_num_layers=1, decoder_num_layers=1).to(device)
+    model = LanguageModel(vocab_size, hparams["d_model"], encoder_num_layers=hparams["num_layers"], decoder_num_layers=hparams["num_layers"]).to(device)
 
     # since the formula for learning rate in the paper is d^-0.5_model * min(step_num^-0.5, step_num * warmup_steps^-1.5)
     # target/maximum learning rate happens when step_num == warmup_steps
@@ -199,12 +200,12 @@ def main():
     def lr_lambda(step_num: int):
         # step_num starts from 0 in Pytorch but the paper's formula starts from 1
         step_num += 1
-        return hparams["d_model"] ** -0.5 * min((step_num + 1) ** -0.5, (step_num + 1) * hparams["warmup_steps"] ** -1.5)
+        return hparams["d_model"] ** -0.5 * min(step_num ** -0.5, step_num * hparams["warmup_steps"] ** -1.5)
     
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
     loss_fn = nn.CrossEntropyLoss(ignore_index=LABEL_PAD_ID, label_smoothing=hparams["label_smoothing"])
 
-    log_dir = "runs/one-tenth-warmup"
+    log_dir = "runs/ten-epoch"
     writer = SummaryWriter(log_dir=log_dir)
 
     def move_dict_to_device(d: dict[str, torch.Tensor], device: str):
@@ -217,7 +218,7 @@ def main():
 
     try:
         for e in range(hparams["epoch"]):
-            print(f"---------- epoch {e} ----------")
+            print(f"---------- epoch {e + 1} ----------")
             model.train()
             for i, batch in enumerate(train_loader):
                 move_dict_to_device(batch, device)
@@ -270,30 +271,30 @@ def main():
         MODEL_SAVE_PATH = MODEL_PATH / "base_model.pth"
         print(f"Saving model to: {MODEL_SAVE_PATH}")
         torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH)
-
-        bleu_score = BLEUScore(n_gram=4).to(device)
-        model.eval()
-        with torch.inference_mode():
-            for i, batch in enumerate(test_loader):
-                print()
-                move_dict_to_device(batch, device)
-                key_padding_mask = batch["attention_mask"] == 0
-                predict_tokens = model.generate(batch["input_ids"], special_token_ids, source_key_padding_mask=key_padding_mask, memory_key_padding_mask=key_padding_mask)
-                padded_labels = torch.masked_fill(batch["labels"][:, 1:], batch["labels"][:, 1:] == LABEL_PAD_ID, tokenizer.pad_token_id)
-                predict_sentence = tokenizer.batch_decode(predict_tokens, skip_special_tokens=True)
-                target_sentence = tokenizer.batch_decode(padded_labels, skip_special_tokens=True)
-                bleu_score.update(predict_sentence, target_sentence)
-                print(f"Translation {predict_sentence[0]}, Target: {target_sentence[0]}")
-
-        writer.add_hparams(hparams, {"bleu_score": bleu_score.compute()})
     except Exception as e:
         print("Training failed, cleaning logs...")
-
+        writer.close()
+        
         if os.path.exists(log_dir):
             shutil.rmtree(log_dir)
-        print(e)
-    finally:
-        writer.close()
+        raise
+
+    bleu_score = BLEUScore(n_gram=4).to(device)
+    model.eval()
+    with torch.inference_mode():
+        for i, batch in enumerate(test_loader):
+            print()
+            move_dict_to_device(batch, device)
+            key_padding_mask = batch["attention_mask"] == 0
+            predict_tokens = model.generate(batch["input_ids"], special_token_ids, source_key_padding_mask=key_padding_mask, memory_key_padding_mask=key_padding_mask)
+            padded_labels = torch.masked_fill(batch["labels"][:, 1:], batch["labels"][:, 1:] == LABEL_PAD_ID, tokenizer.pad_token_id)
+            predict_sentence = tokenizer.batch_decode(predict_tokens, skip_special_tokens=True)
+            target_sentence = tokenizer.batch_decode(padded_labels, skip_special_tokens=True)
+            bleu_score.update(predict_sentence, target_sentence)
+            print(f"Translation: {predict_sentence[0]}, Target: {target_sentence[0]}")
+
+    writer.add_hparams(hparams, {"bleu_score": bleu_score.compute()})
+    writer.close()
 
 if __name__ == "__main__":
     main()

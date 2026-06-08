@@ -1,5 +1,3 @@
-import shutil
-
 from datasets import load_dataset
 from pathlib import Path
 from torch import nn
@@ -12,7 +10,9 @@ from typing import Optional
 
 
 import os
+import shutil
 import torch
+import torchinfo
 
 
 class LanguageModel(nn.Module):
@@ -271,6 +271,7 @@ def main():
         MODEL_SAVE_PATH = MODEL_PATH / "base_model.pth"
         print(f"Saving model to: {MODEL_SAVE_PATH}")
         torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH)
+        torchinfo.summary(model)
     except Exception as e:
         print("Training failed, cleaning logs...")
         writer.close()
